@@ -11993,11 +11993,11 @@ function createAbstractMapReduce(localDocName, mapper, reducer, ddocValidator) {
 
     var queue = new TaskQueue$2();
 
-    function processNextBatch() {
+    function processNextBatch(opts) {
       return view.sourceDB.changes({
         conflicts: true,
         include_docs: true,
-        style: 'all_docs',
+        style: 'main_only',
         since: currentSeq,
         limit: CHANGES_BATCH_SIZE$1
       }).then(processBatch);
@@ -13005,6 +13005,7 @@ function replicate(src, target, opts, returnValue, result) {
   var last_seq = 0;
   var continuous = opts.continuous || opts.live || false;
   var batch_size = opts.batch_size || 100;
+  var style = opts.style || 'all_docs';
   var batches_limit = opts.batches_limit || 10;
   var changesPending = false;     // true while src.changes is running
   var doc_ids = opts.doc_ids;
@@ -13154,9 +13155,9 @@ function replicate(src, target, opts, returnValue, result) {
       return;
     }
     currentBatch = batches.shift();
-    getDiffs()
-      .then(getBatchDocs)
-      .then(writeDocs)
+    // getDiffs()
+    //   .then(getBatchDocs)
+      writeDocs()
       .then(finishBatch)
       .then(startNextBatch)[
       "catch"](function (err) {
@@ -13256,6 +13257,7 @@ function replicate(src, target, opts, returnValue, result) {
     if (returnValue.cancelled) {
       return completeReplication();
     }
+    opts.include_docs = true;
     var filter = filterChange(opts)(change);
     if (!filter) {
       return;
@@ -13367,7 +13369,7 @@ function replicate(src, target, opts, returnValue, result) {
           since: last_seq,
           limit: batch_size,
           batch_size: batch_size,
-          style: 'all_docs',
+          style: "main_only",
           doc_ids: doc_ids,
           return_docs: true // required so we know when we're done
         };
